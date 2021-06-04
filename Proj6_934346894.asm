@@ -23,8 +23,8 @@ mGetString  macro promptAddr, userInputAddr, byteCountAddr
     call    WriteString
 
 
-    mov     edx, offset userInputAddr
-    mov     ecx, 30
+    mov     edx, userInputAddr
+    mov     ecx, MAX_LENGTH
     call    ReadString
     mov     edi, byteCountAddr
     mov     [edi], eax
@@ -35,44 +35,79 @@ mGetString  macro promptAddr, userInputAddr, byteCountAddr
     pop     edx
 endm
 
-mDisplayString  macro string
-    ; macro body
+mDisplayString  macro stringAddr
+    push    edx
+    mov     edx, stringAddr
+    call    WriteString
+    pop     edx
 endm
 
 ; (insert constant definitions here)
+; An SDWORD is 32 bits and can hold numbers in the range from -2^31 to 2^31 - 1.
+; This is equivilent to -2147483648 to +2147483647
+MAX_LENGTH = 11
+NUM_INTS = 10
 
 .data
 
+; Note: lines are limited to 512 characters in MASM and this string is really
+; close to that limit
+introTitle      byte    "String Primitives and Macros",13,10,"Written by: Ethan",
+                        " Rietz",13,10,13,10,"Please provide 10 signed decimal",
+                        " integers.",13,10,"Each number needs to be small enough",
+                        " to fit inside a 32 bit register. After you have finished",
+                        " inputting the raw numbers, I will display a list of",
+                        " the integers, their sum, and their average value.",13,10,13,10,0
+
 promptInput     byte    "Please enter a signed number: ",0
-userInput       byte    50 dup(?)
+userInput       byte    MAX_LENGTH dup(?)
 byteCount       dword   ?
+
+userValues      sdword  NUM_INTS dup(?)
+userValue       sdword  ?
 
 .code
 main PROC
 
-; (insert executable instructions here)
-    mGetString  offset promptInput, offset userInput, offset byteCount
-
-    mov     edx, offset userInput
+    ; Print the program title, introduction, and instructions to user.
+    mov     edx, offset introTitle
     call    WriteString
-    call    CrLf
 
-    mov     eax, byteCount
-    call    WriteDec
+
+    mov     ecx, NUM_INTS
+    _getValue:
+        push    offset promptInput  ; +16
+        push    offset userInput    ; +12
+        push    offset byteCount    ; +8
+        push    offset userValue    ; +4
+        call    ReadVal             ; should return 4*4 = 16
+
+        mov     eax, userValue
+        call    WriteInt
+        loop    _getValue
+
+
+    ;mGetString  offset promptInput, offset userInput, offset byteCount
+    ;mDisplayString  offset userInput
+    ;mov     eax, byteCount
+    ;call    WriteDec
 
     Invoke ExitProcess,0    ; exit to operating system
 main ENDP
-
-; (insert additional procedures here)
 
 ReadVal     proc
     push    ebp
     mov     ebp, esp
     pushad
 
+    mGetString  [ebp+20], [ebp+16], [ebp+12]
+    ;mov     edi, [ebp+8]
+    ;mov     ebx, [ebp+12]
+    ;mov     [edi], ebx     ; need to be the same size array elements
+
     popad
     pop     ebp
-    ret     
+    ret     16
 ReadVal     endp
 
 WriteVal    proc
@@ -84,16 +119,6 @@ WriteVal    proc
     pop     ebp
     ret     
 WriteVal     endp
-
-introduction    proc
-    push    ebp
-    mov     ebp, esp
-    pushad
-
-    popad
-    pop     ebp
-    ret     
-introduction    endp
 
 calcAverage     proc
     push    ebp
