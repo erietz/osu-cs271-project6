@@ -1,4 +1,4 @@
-TITLE <FIXME>     (FIXME.asm)
+TITLE FIXME     (FIXME.asm)
 
 ; Author                : Ethan Rietz
 ; Last Modified         : 2021-06-03
@@ -13,8 +13,26 @@ INCLUDE Irvine32.inc
 
 ; (insert macro definitions here)
 
-mGetString  macro prompt count
-    ; macro body
+mGetString  macro promptAddr, userInputAddr, byteCountAddr
+    push    edx
+    push    ecx
+    push    eax
+    push    edi
+
+    mov     edx, promptAddr
+    call    WriteString
+
+
+    mov     edx, offset userInputAddr
+    mov     ecx, 30
+    call    ReadString
+    mov     edi, byteCountAddr
+    mov     [edi], eax
+
+    pop     edi
+    pop     eax
+    pop     ecx
+    pop     edx
 endm
 
 mDisplayString  macro string
@@ -25,12 +43,22 @@ endm
 
 .data
 
-; (insert variable definitions here)
+promptInput     byte    "Please enter a signed number: ",0
+userInput       byte    50 dup(?)
+byteCount       dword   ?
 
 .code
 main PROC
 
 ; (insert executable instructions here)
+    mGetString  offset promptInput, offset userInput, offset byteCount
+
+    mov     edx, offset userInput
+    call    WriteString
+    call    CrLf
+
+    mov     eax, byteCount
+    call    WriteDec
 
     Invoke ExitProcess,0    ; exit to operating system
 main ENDP
@@ -44,7 +72,7 @@ ReadVal     proc
 
     popad
     pop     ebp
-    ret     FIXME
+    ret     
 ReadVal     endp
 
 WriteVal    proc
@@ -54,7 +82,7 @@ WriteVal    proc
 
     popad
     pop     ebp
-    ret     FIXME
+    ret     
 WriteVal     endp
 
 introduction    proc
@@ -64,7 +92,7 @@ introduction    proc
 
     popad
     pop     ebp
-    ret     FIXME
+    ret     
 introduction    endp
 
 calcAverage     proc
@@ -74,7 +102,7 @@ calcAverage     proc
 
     popad
     pop     ebp
-    ret     FIXME
+    ret     
 calcAverage     endp
 
 displayResults  proc
@@ -84,7 +112,7 @@ displayResults  proc
 
     popad
     pop     ebp
-    ret     FIXME
+    ret     
 displayResults  endp
 
 END main

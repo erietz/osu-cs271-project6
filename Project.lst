@@ -1,14 +1,18 @@
-Microsoft (R) Macro Assembler Version 14.28.29913.0	    03/30/21 17:06:32
-Remove Me!     (RemoveMe.asm				     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 08:44:15
+FIXME     (FIXME.asm					     Page 1 - 1
 
 
-				TITLE Remove Me!     (RemoveMe.asm)
-
-				; Author: 	Stephen Redfield
-				; Last Modified:	May 11, 2020
-				; Course number/section:   CS271 Section ???
-				; Description: This file is provided so you have something to remove from a Solution
-
+				TITLE FIXME     (FIXME.asm)
+				
+				; Author                : Ethan Rietz
+				; Last Modified         : 2021-06-03
+				; OSU email address     : rietze@oregonstate.edu
+				; Course number/section : CS271 Section 400
+				; Project Number        : 6
+				; Due Date              : 2021-06-6
+				; Description           : \
+				;   FIXME
+				
 				INCLUDE Irvine32.inc
 			      C ; Include file for Irvine32.lib             (Irvine32.inc)
 			      C 
@@ -27,40 +31,145 @@ Microsoft (R) Macro Assembler Version 14.28.29913.0	    03/30/21 17:06:32
 			      C .NOLIST
 			      C .LIST
 			      C 
+				
+				; (insert macro definitions here)
+				
+				mGetString  macro promptAddr, userInputAddr, byteCountAddr
+				    push    edx    push    ecx    push    eax    push    edi
+				    mov     edx, promptAddr
+				    call    WriteString
+				
+				    mov     edx, offset userInputAddr
+				    mov     ecx, 30    call    ReadString    mov     edi, byteCountAddr
+				    mov     [edi], eax
+				    pop     edi    pop     eax    pop     ecx    pop     edxendm
+				
+				mDisplayString  macro string
+				    ; macro bodyendm
+				
+				; (insert constant definitions here)
+				
+				.data
+				
+				promptInput     byte    "Please enter a signed number: ",0
+				userInput       byte    50 dup(?)
+				byteCount       dword   ?
+				
+				.code
+				main PROC
+				
+				; (insert executable instructions here)
+				    mGetString  offset promptInput, offset userInput, offset byteCount
+				
+				    mov     edx, offset userInput
+ 00000000			    call    WriteString
+				    call    CrLf
+ 00000000 50 6C 65 61 73	
+	   65 20 65 6E 74
+	   65 72 20 61 20
+	   73 69 67 6E 65
+	   64 20 6E 75 6D
+	   62 65 72 3A 20
+	   00
+ 0000001F  00000032 [		    mov     eax, byteCount
+	    00
+	   ]
+ 00000051 00000000		    call    WriteDec
+				
+ 00000000			    Invoke ExitProcess,0    ; exit to operating system
+ 00000000			main ENDP
+				
+				; (insert additional procedures here)
+				
+ 00000000  52		     1	    push    edx
+ 00000001  51		     1	    push    ecx
+ 00000002  50		     1	    push    eax
+ 00000003  57		     1	    push    edi
+ 00000004  BA 00000000 R     1	    mov     edx, offset promptInput
+ 00000009  E8 00000000 E     1	    call    WriteString
+ 0000000E  BA 0000001F R     1	    mov     edx, offset offset userInput
+ 00000013  B9 0000001E	     1	    mov     ecx, 30
+ 00000018  E8 00000000 E     1	    call    ReadString
+ 0000001D  BF 00000051 R     1	    mov     edi, offset byteCount
+ 00000022  89 07	     1	    mov     [edi], eax
+ 00000024  5F		     1	    pop     edi
+ 00000025  58		     1	    pop     eax
+ 00000026  59		     1	    pop     ecx
+ 00000027  5A		     1	    pop     edx
+				ReadVal     proc
+ 00000028  BA 0000001F R	    push    ebp
+ 0000002D  E8 00000000 E	    mov     ebp, esp
+ 00000032  E8 00000000 E	    pushad
+				
+ 00000037  A1 00000051 R	    popad
+ 0000003C  E8 00000000 E	    pop     ebp
+				    ret     
+				ReadVal     endp
+ 00000041  6A 00	   *	    push   +000000000h
+ 00000043  E8 00000000 E   *	    call   ExitProcess
+ 00000048			
+				WriteVal    proc
+				    push    ebp
+				    mov     ebp, esp
+ 00000048			    pushad
+ 00000048  55			
+ 00000049  8B EC		    popad
+ 0000004B  60			    pop     ebp
+				    ret     
+ 0000004C  61			WriteVal     endp
+ 0000004D  5D			
+ 0000004E  C3			introduction    proc
+ 0000004F			    push    ebp
+				    mov     ebp, esp
+ 0000004F			    pushad
+ 0000004F  55			
+ 00000050  8B EC		    popad
+ 00000052  60			    pop     ebp
+				    ret     
+ 00000053  61			introduction    endp
+ 00000054  5D			
+ 00000055  C3			calcAverage     proc
+ 00000056			    push    ebp
+				    mov     ebp, esp
+ 00000056			    pushad
+ 00000056  55			
+ 00000057  8B EC		    popad
+ 00000059  60			    pop     ebp
+				    ret     
+ 0000005A  61			calcAverage     endp
+ 0000005B  5D			
+ 0000005C  C3			displayResults  proc
+ 0000005D			    push    ebp
+				    mov     ebp, esp
+ 0000005D			    pushad
+ 0000005D  55			
+ 0000005E  8B EC		    popad
+ 00000060  60			    pop     ebp
+				    ret     
+ 00000061  61			displayResults  endp
+ 00000062  5D			
+ 00000063  C3			END main
+ 00000064
+ 00000064
+ 00000064  55
+ 00000065  8B EC
+ 00000067  60
+ 00000068  61
+ 00000069  5D
+ 0000006A  C3
+ 0000006B
+Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 08:44:15
+FIXME     (FIXME.asm					     Symbols 2 - 1
 
- 00000000			.data
- 00000000 49 66 20 79 6F	Greeting	BYTE	"If you're seeing this, you haven't removed this .asm file yet!",0
-	   75 27 72 65 20
-	   73 65 65 69 6E
-	   67 20 74 68 69
-	   73 2C 20 79 6F
-	   75 20 68 61 76
-	   65 6E 27 74 20
-	   72 65 6D 6F 76
-	   65 64 20 74 68
-	   69 73 20 2E 61
-	   73 6D 20 66 69
-	   6C 65 20 79 65
-	   74 21 00
 
 
- 00000000			.code
- 00000000			main PROC
- 00000000  BA 00000000 R		MOV	EDX, OFFSET Greeting
- 00000005  E8 00000000 E		Call WriteString
- 0000000A  E8 00000000 E		Call CrLf
 
-					Invoke ExitProcess,0	; exit to operating system
- 0000000F  6A 00	   *	    push   +000000000h
- 00000011  E8 00000000 E   *	    call   ExitProcess
- 00000016			main ENDP
+Macros:
 
+                N a m e                 Type
 
-				END main
-Microsoft (R) Macro Assembler Version 14.28.29913.0	    03/30/21 17:06:32
-Remove Me!     (RemoveMe.asm				     Symbols 2 - 1
-
-
+mDisplayString . . . . . . . . .	Proc
+mGetString . . . . . . . . . . .	Proc
 
 
 Structures and Unions:
@@ -151,8 +260,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 0000003F Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000016 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 00000055 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000006B Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -222,6 +331,7 @@ ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 ReadKeyFlush . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadKey  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadVal  . . . . . . . . . . . .	P Near	 00000048 _TEXT	Length= 00000007 Public STDCALL
 SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -258,8 +368,12 @@ WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteVal . . . . . . . . . . . .	P Near	 0000004F _TEXT	Length= 00000007 Public STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000016 Public STDCALL
+calcAverage  . . . . . . . . . .	P Near	 0000005D _TEXT	Length= 00000007 Public STDCALL
+displayResults . . . . . . . . .	P Near	 00000064 _TEXT	Length= 00000007 Public STDCALL
+introduction . . . . . . . . . .	P Near	 00000056 _TEXT	Length= 00000007 Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000048 Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -327,7 +441,6 @@ GENERIC_EXECUTE  . . . . . . . .	Number	 20000000h
 GENERIC_READ . . . . . . . . . .	Number	 -80000000h   
 GENERIC_WRITE  . . . . . . . . .	Number	 40000000h   
 GetCommandLine . . . . . . . . .	Text   	 GetCommandLineA
-Greeting . . . . . . . . . . . .	Byte	 00000000 _DATA	
 HANDLE . . . . . . . . . . . . .	Text   	 DWORD
 HEAP_GENERATE_EXCEPTIONS . . . .	Number	 00000004h   
 HEAP_GROWABLE  . . . . . . . . .	Number	 00000002h   
@@ -482,6 +595,7 @@ WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
+byteCount  . . . . . . . . . . .	DWord	 00000051 _DATA	
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
 gray . . . . . . . . . . . . . .	Number	 00000008h   
@@ -493,7 +607,9 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
+promptInput  . . . . . . . . . .	Byte	 00000000 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
+userInput  . . . . . . . . . . .	Byte	 0000001F _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
