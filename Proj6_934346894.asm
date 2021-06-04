@@ -43,10 +43,15 @@ mDisplayString  macro stringAddr
 endm
 
 ; (insert constant definitions here)
+;
 ; An SDWORD is 32 bits and can hold numbers in the range from -2^31 to 2^31 - 1.
 ; This is equivilent to -2147483648 to +2147483647
-MAX_LENGTH = 11
-NUM_INTS = 10
+;
+; ReadString seems to only read 10 so adding 1 plus an extra to check if too
+; long
+MAX_LENGTH = 11 + 2     
+; Read 10 ints from user
+NUM_INTS = 3
 
 .data
 
@@ -66,25 +71,60 @@ byteCount       dword   ?
 userValues      sdword  NUM_INTS dup(?)
 userValue       sdword  ?
 
+strYouEntered   byte    "You entered the following numbers:",13,10,0
+strTheSumIs     byte    "The sum of these numbers is: ",0
+strTheAveIs     byte    "The rounded averagea is: ",0
+strClosing      byte    "Thanks for playing!!!",0
+
 .code
 main PROC
 
-    ; Print the program title, introduction, and instructions to user.
+    ; Print the program title, introduction, and instructions to user.----------
     mov     edx, offset introTitle
     call    WriteString
 
 
+    ; Get values from the user--------------------------------------------------
     mov     ecx, NUM_INTS
-    _getValue:
+    mov     edi, offset userValues
+    _getNumbers:
         push    offset promptInput  ; +16
         push    offset userInput    ; +12
         push    offset byteCount    ; +8
         push    offset userValue    ; +4
         call    ReadVal             ; should return 4*4 = 16
+        mov     ebx, userValue
+        mov     [edi], ebx
+        add     edi, type userValues
 
-        mov     eax, userValue
-        call    WriteInt
-        loop    _getValue
+        mov     edx, offset userInput
+        call    WriteString
+        call    CrLf
+
+        mov     eax, byteCount
+        call    WriteDec
+        call    CrLf
+
+        ;mov     eax, userValue
+        ;call    WriteInt
+        loop    _getNumbers
+
+    ; Display results-----------------------------------------------------------
+    mDisplayString  offset strYouEntered
+
+    mov     ecx, NUM_INTS
+    mov     edi, offset userValues
+    _calculateSum:
+        loop    _calculateSum
+
+    mDisplayString  offset strTheSumIs
+    call    CrLf
+
+    mDisplayString  offset strTheAveIs
+    call    CrLf
+
+    mDisplayString  offset strClosing
+
 
 
     ;mGetString  offset promptInput, offset userInput, offset byteCount
