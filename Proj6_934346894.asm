@@ -71,10 +71,15 @@ byteCount       dword   ?
 userValues      sdword  NUM_INTS dup(?)
 userValue       sdword  ?
 
+sum             sdword  ?
+average         sdword  ?
+
 strYouEntered   byte    "You entered the following numbers:",13,10,0
 strTheSumIs     byte    "The sum of these numbers is: ",0
-strTheAveIs     byte    "The rounded averagea is: ",0
+strTheAvgIs     byte    "The rounded average is:      ",0
 strClosing      byte    "Thanks for playing!!!",0
+
+strInvalid      byte    "Number Invalid... Try again",13,10,0
 
 .code
 main PROC
@@ -88,43 +93,62 @@ main PROC
     mov     ecx, NUM_INTS
     mov     edi, offset userValues
     _getNumbers:
+        ; reads users string into userValue
         push    offset promptInput  ; +16
         push    offset userInput    ; +12
         push    offset byteCount    ; +8
         push    offset userValue    ; +4
         call    ReadVal             ; should return 4*4 = 16
+        ; fill position in userValues with userValue
         mov     ebx, userValue
         mov     [edi], ebx
         add     edi, type userValues
 
-        mov     edx, offset userInput
-        call    WriteString
-        call    CrLf
-
-        mov     eax, byteCount
-        call    WriteDec
-        call    CrLf
-
+        ;mov     edx, offset userInput
+        ;call    WriteString
+        ;call    CrLf
+        ;mov     eax, byteCount
+        ;call    WriteDec
+        ;call    CrLf
         ;mov     eax, userValue
         ;call    WriteInt
+
         loop    _getNumbers
 
-    ; Display results-----------------------------------------------------------
+    ; Calculate sum, average, and display results-------------------------------
     mDisplayString  offset strYouEntered
 
+    mov     esi, offset userValues
     mov     ecx, NUM_INTS
-    mov     edi, offset userValues
     _calculateSum:
+        mov     ebx, [esi]
+        add     sum, ebx
+        add     esi, type userValues
+
+        mov     eax, ebx
+        call    WriteInt
+        call    CrLf
+
         loop    _calculateSum
 
+    _calculateAvg:
+        mov     eax, sum
+        mov     ebx, NUM_INTS
+        cdq     ;TODO: what does this do?
+        idiv    ebx
+        mov     average, eax
+
     mDisplayString  offset strTheSumIs
+    mov     eax, sum
+    call    WriteInt
     call    CrLf
 
-    mDisplayString  offset strTheAveIs
+    mDisplayString  offset strTheAvgIs
+    mov     eax, average
+    call    WriteInt
     call    CrLf
 
     mDisplayString  offset strClosing
-
 
 
     ;mGetString  offset promptInput, offset userInput, offset byteCount
@@ -136,14 +160,59 @@ main PROC
 main ENDP
 
 ReadVal     proc
+    ;[ebp+20] = promptInput
+    ;[ebp+16] = userInput
+    ;[ebp+12] = byteCount
+    ;[ebp+8]  = userValue (output)
     push    ebp
     mov     ebp, esp
     pushad
 
-    mGetString  [ebp+20], [ebp+16], [ebp+12]
-    ;mov     edi, [ebp+8]
-    ;mov     ebx, [ebp+12]
-    ;mov     [edi], ebx     ; need to be the same size array elements
+
+    ; The number 3945 = 3E3 + 9E2 + 4E1 + 5E0
+    ; Here we are doing basically this exact thing in reverse
+    _promptForInput:
+        mGetString  [ebp+20], [ebp+16], [ebp+12]
+
+    ; Loop through the string in verse
+    mov     eax, 0  ; initialize eax for string processing
+    mov     edx, 0  ; sum of digits
+    mov     esi, [ebp+16]
+    mov     ecx, byteCount
+    ;add     esi, ecx
+    ;dec     esi
+
+    _checkDigit:
+        ;std     ; set direction flag to decrement ESI and EDI for string instructions 
+        lodsb
+        cld     ; clear direction flag
+        cmp     al, 48
+        jl      _numberIsInvalid
+        cmp     al, 57
+        jg      _numberIsInvalid
+
+        _numberIsValid:
+            sub     al, 48
+            push    eax
+            mov     eax, edx
+            mov     ebx, 10
+            mul     ebx
+            mov     edx, eax
+            pop     eax
+            add     edx, eax
+            loop    _checkDigit
+            jmp     _storeValue
+
+        _numberIsInvalid:
+            push    edx
+            mov     edx, offset strInvalid
+            call    WriteString
+            pop     edx
+            jmp     _promptForInput
+
+    _storeValue:
+        mov     edi, [ebp+8]
+        mov     [edi], edx
 
     popad
     pop     ebp
