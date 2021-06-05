@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 22:38:20
+Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 23:23:41
 FIXME     (FIXME.asm					     Page 1 - 1
 
 
@@ -289,25 +289,24 @@ Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 22:38:20
 				
 				
 				    ; The number 3945 = 3E3 + 9E2 + 4E1 + 5E0
-				    ; Here we are doing basically this exact thing in reverse
+				    _promptForInput:
  000000BD  6A 00	   *	    push   +000000000h
  000000BF  E8 00000000 E   *	    call   ExitProcess
- 000000C4			    _promptForInput:
-				        mGetString  [ebp+20], [ebp+16], [ebp+12]
- 000000C4			
-				    ; Loop through the string in verse
+ 000000C4			        mGetString  [ebp+20], [ebp+16], [ebp+12]
+				
+ 000000C4			    mov     ebx, 0  ; set to False for number being negative
 				    mov     eax, 0  ; initialize eax for string processing
 				    mov     edx, 0  ; sum of digits
 				    mov     esi, [ebp+16]
- 000000C4  55			    mov     ecx, byteCount
+				    mov     ecx, byteCount
+ 000000C4  55			    ; for looping throug in reverse
  000000C5  8B EC		    ;add     esi, ecx
  000000C7  60			    ;dec     esi
+				    cld     ; clear direction flag
 				
 				    _checkDigit:
-				        ;std     ; set direction flag to decrement ESI and EDI for string instructions 
+ 000000C8			        ;std     ; set direction flag to decrement ESI and EDI for string instructions 
 				        lodsb
- 000000C8			        cld     ; clear direction flag
-				        cmp     al, 48
  000000C8  52		     1	    push    edx
  000000C9  51		     1	    push    ecx
  000000CA  50		     1	    push    eax
@@ -323,80 +322,102 @@ Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 22:38:20
  000000E7  58		     1	    pop     eax
  000000E8  59		     1	    pop     ecx
  000000E9  5A		     1	    pop     edx
-				        jl      _numberIsInvalid
-				        cmp     al, 57
- 000000EA  B8 00000000		        jg      _numberIsInvalid
- 000000EF  BA 00000000		
- 000000F4  8B 75 10		        _numberIsValid:
- 000000F7  8B 0D 00000159 R	            sub     al, 48
-				            push    eax
-				            mov     eax, edx
-				            mov     ebx, 10
- 000000FD			            mul     ebx
-				            mov     edx, eax
- 000000FD  AC			            pop     eax
- 000000FE  FC			            add     edx, eax
- 000000FF  3C 30		            loop    _checkDigit
- 00000101  7C 19		            jmp     _storeValue
- 00000103  3C 39		
- 00000105  7F 15		        _numberIsInvalid:
-				            push    edx
- 00000107			            mov     edx, offset strInvalid
- 00000107  2C 30		            call    WriteString
- 00000109  50			            pop     edx
- 0000010A  8B C2		            jmp     _promptForInput
- 0000010C  BB 0000000A		
- 00000111  F7 E3		    _storeValue:
- 00000113  8B D0		        mov     edi, [ebp+8]
- 00000115  58			        mov     [edi], edx
- 00000116  03 D0		
- 00000118  E2 E3		    popad
- 0000011A  EB 0E		    pop     ebp
-				    ret     16
- 0000011C			ReadVal     endp
- 0000011C  52			
- 0000011D  BA 000001EC R	WriteVal    proc
- 00000122  E8 00000000 E	    push    ebp
- 00000127  5A			    mov     ebp, esp
- 00000128  EB 9E		    pushad
+				        cmp     ecx, byteCount
+ 000000EA  BB 00000000		        je      _firstCharacter
+ 000000EF  B8 00000000		        jmp     _notFirstCharacter
+ 000000F4  BA 00000000		
+ 000000F9  8B 75 10		        _firstCharacter:
+ 000000FC  8B 0D 00000159 R	            cmp     al, 45  ; "-"
+				            je      _negative
+				            jmp     _notFirstCharacter
 				
- 0000012A			    popad
- 0000012A  8B 7D 08		    pop     ebp
- 0000012D  89 17		    ret     
+ 00000102  FC			            _negative:
+				                mov     ebx, 1
+ 00000103			                loop     _checkDigit
+				
+ 00000103  AC			        _notFirstCharacter:
+ 00000104  3B 0D 00000159 R	            cmp     al, 48
+ 0000010A  74 02		            jl      _numberIsInvalid
+ 0000010C  EB 0D		            cmp     al, 57
+				            jg      _numberIsInvalid
+ 0000010E			
+ 0000010E  3C 2D		            _numberIsValid:
+ 00000110  74 02		                sub     al, 48
+ 00000112  EB 07		                push    eax
+				                mov     eax, edx
+ 00000114			                push    ebx
+ 00000114  BB 00000001		                mov     ebx, 10
+ 00000119  E2 E8		                mul     ebx
+				                pop     ebx
+ 0000011B			                mov     edx, eax
+ 0000011B  3C 30		                pop     eax
+ 0000011D  7C 1B		                add     edx, eax
+ 0000011F  3C 39		                loop    _checkDigit
+ 00000121  7F 17		                jmp     _storeValue
+				
+ 00000123			            _numberIsInvalid:
+ 00000123  2C 30		                push    edx
+ 00000125  50			                mov     edx, offset strInvalid
+ 00000126  8B C2		                call    WriteString
+ 00000128  53			                pop     edx
+ 00000129  BB 0000000A		                jmp     _promptForInput
+ 0000012E  F7 E3		
+ 00000130  5B			    _storeValue:
+ 00000131  8B D0		        cmp     ebx, 1
+ 00000133  58			        jne      _storePositive
+ 00000134  03 D0		        neg     edx
+ 00000136  E2 CB		
+ 00000138  EB 0E		        _storePositive:
+				            mov     edi, [ebp+8]
+ 0000013A			            mov     [edi], edx
+ 0000013A  52			
+ 0000013B  BA 000001EC R	    popad
+ 00000140  E8 00000000 E	    pop     ebp
+ 00000145  5A			    ret     16
+ 00000146  EB 80		ReadVal     endp
+				
+ 00000148			WriteVal    proc
+ 00000148  83 FB 01		    push    ebp
+ 0000014B  75 02		    mov     ebp, esp
+ 0000014D  F7 DA		    pushad
+				
+ 0000014F			    popad
+ 0000014F  8B 7D 08		    pop     ebp
+ 00000152  89 17		    ret     
 				WriteVal     endp
- 0000012F  61			
- 00000130  5D			calcAverage     proc
- 00000131  C2 0010		    push    ebp
- 00000134			    mov     ebp, esp
+ 00000154  61			
+ 00000155  5D			calcAverage     proc
+ 00000156  C2 0010		    push    ebp
+ 00000159			    mov     ebp, esp
 				    pushad
- 00000134			
- 00000134  55			    popad
- 00000135  8B EC		    pop     ebp
- 00000137  60			    ret     
+ 00000159			
+ 00000159  55			    popad
+ 0000015A  8B EC		    pop     ebp
+ 0000015C  60			    ret     
 				calcAverage     endp
- 00000138  61			
- 00000139  5D			displayResults  proc
- 0000013A  C3			    push    ebp
- 0000013B			    mov     ebp, esp
+ 0000015D  61			
+ 0000015E  5D			displayResults  proc
+ 0000015F  C3			    push    ebp
+ 00000160			    mov     ebp, esp
 				    pushad
- 0000013B			
- 0000013B  55			    popad
- 0000013C  8B EC		    pop     ebp
- 0000013E  60			    ret     
+ 00000160			
+ 00000160  55			    popad
+ 00000161  8B EC		    pop     ebp
+ 00000163  60			    ret     
 				displayResults  endp
- 0000013F  61			
- 00000140  5D			END main
- 00000141  C3
- 00000142
- 00000142
- 00000142  55
- 00000143  8B EC
- 00000145  60
- 00000146  61
- 00000147  5D
- 00000148  C3
- 00000149
-Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 22:38:20
+ 00000164  61			
+ 00000165  5D			END main
+ 00000166  C3
+ 00000167
+ 00000167
+ 00000167  55
+ 00000168  8B EC
+ 0000016A  60
+ 0000016B  61
+ 0000016C  5D
+ 0000016D  C3
+ 0000016E
+Microsoft (R) Macro Assembler Version 14.28.29913.0	    06/04/21 23:23:41
 FIXME     (FIXME.asm					     Symbols 2 - 1
 
 
@@ -499,7 +520,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 0000020A Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000149 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000016E Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -569,12 +590,16 @@ ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 ReadKeyFlush . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadKey  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-ReadVal  . . . . . . . . . . . .	P Near	 000000C4 _TEXT	Length= 00000070 Public STDCALL
+ReadVal  . . . . . . . . . . . .	P Near	 000000C4 _TEXT	Length= 00000095 Public STDCALL
   _promptForInput  . . . . . . .	L Near	 000000C8 _TEXT	
-  _checkDigit  . . . . . . . . .	L Near	 000000FD _TEXT	
-  _numberIsValid . . . . . . . .	L Near	 00000107 _TEXT	
-  _numberIsInvalid . . . . . . .	L Near	 0000011C _TEXT	
-  _storeValue  . . . . . . . . .	L Near	 0000012A _TEXT	
+  _checkDigit  . . . . . . . . .	L Near	 00000103 _TEXT	
+  _firstCharacter  . . . . . . .	L Near	 0000010E _TEXT	
+  _negative  . . . . . . . . . .	L Near	 00000114 _TEXT	
+  _notFirstCharacter . . . . . .	L Near	 0000011B _TEXT	
+  _numberIsValid . . . . . . . .	L Near	 00000123 _TEXT	
+  _numberIsInvalid . . . . . . .	L Near	 0000013A _TEXT	
+  _storeValue  . . . . . . . . .	L Near	 00000148 _TEXT	
+  _storePositive . . . . . . . .	L Near	 0000014F _TEXT	
 SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -611,10 +636,10 @@ WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-WriteVal . . . . . . . . . . . .	P Near	 00000134 _TEXT	Length= 00000007 Public STDCALL
+WriteVal . . . . . . . . . . . .	P Near	 00000159 _TEXT	Length= 00000007 Public STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-calcAverage  . . . . . . . . . .	P Near	 0000013B _TEXT	Length= 00000007 Public STDCALL
-displayResults . . . . . . . . .	P Near	 00000142 _TEXT	Length= 00000007 Public STDCALL
+calcAverage  . . . . . . . . . .	P Near	 00000160 _TEXT	Length= 00000007 Public STDCALL
+displayResults . . . . . . . . .	P Near	 00000167 _TEXT	Length= 00000007 Public STDCALL
 main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 000000C4 Public STDCALL
   _getNumbers  . . . . . . . . .	L Near	 00000014 _TEXT	
   _calculateSum  . . . . . . . .	L Near	 00000050 _TEXT	

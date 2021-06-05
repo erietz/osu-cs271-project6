@@ -170,49 +170,70 @@ ReadVal     proc
 
 
     ; The number 3945 = 3E3 + 9E2 + 4E1 + 5E0
-    ; Here we are doing basically this exact thing in reverse
     _promptForInput:
         mGetString  [ebp+20], [ebp+16], [ebp+12]
 
-    ; Loop through the string in verse
+    mov     ebx, 0  ; set to False for number being negative
     mov     eax, 0  ; initialize eax for string processing
     mov     edx, 0  ; sum of digits
     mov     esi, [ebp+16]
     mov     ecx, byteCount
+    ; for looping throug in reverse
     ;add     esi, ecx
     ;dec     esi
+    cld     ; clear direction flag
 
     _checkDigit:
         ;std     ; set direction flag to decrement ESI and EDI for string instructions 
         lodsb
-        cld     ; clear direction flag
-        cmp     al, 48
-        jl      _numberIsInvalid
-        cmp     al, 57
-        jg      _numberIsInvalid
+        cmp     ecx, byteCount
+        je      _firstCharacter
+        jmp     _notFirstCharacter
 
-        _numberIsValid:
-            sub     al, 48
-            push    eax
-            mov     eax, edx
-            mov     ebx, 10
-            mul     ebx
-            mov     edx, eax
-            pop     eax
-            add     edx, eax
-            loop    _checkDigit
-            jmp     _storeValue
+        _firstCharacter:
+            cmp     al, 45  ; "-"
+            je      _negative
+            jmp     _notFirstCharacter
 
-        _numberIsInvalid:
-            push    edx
-            mov     edx, offset strInvalid
-            call    WriteString
-            pop     edx
-            jmp     _promptForInput
+            _negative:
+                mov     ebx, 1
+                loop     _checkDigit
+
+        _notFirstCharacter:
+            cmp     al, 48
+            jl      _numberIsInvalid
+            cmp     al, 57
+            jg      _numberIsInvalid
+
+            _numberIsValid:
+                sub     al, 48
+                push    eax
+                mov     eax, edx
+                push    ebx
+                mov     ebx, 10
+                mul     ebx
+                pop     ebx
+                mov     edx, eax
+                pop     eax
+                add     edx, eax
+                loop    _checkDigit
+                jmp     _storeValue
+
+            _numberIsInvalid:
+                push    edx
+                mov     edx, offset strInvalid
+                call    WriteString
+                pop     edx
+                jmp     _promptForInput
 
     _storeValue:
-        mov     edi, [ebp+8]
-        mov     [edi], edx
+        cmp     ebx, 1
+        jne      _storePositive
+        neg     edx
+
+        _storePositive:
+            mov     edi, [ebp+8]
+            mov     [edi], edx
 
     popad
     pop     ebp
