@@ -11,8 +11,6 @@ TITLE FIXME     (FIXME.asm)
 
 INCLUDE Irvine32.inc
 
-; (insert macro definitions here)
-
 mGetString  macro promptAddr, userInputAddr, byteCountAddr
     push    edx
     push    ecx
@@ -57,19 +55,20 @@ NUM_INTS = 3
 
 ; Note: lines are limited to 512 characters in MASM and this string is really
 ; close to that limit
-introTitle      byte    "String Primitives and Macros",13,10,"Written by: Ethan",
+strIntro        byte    "String Primitives and Macros",13,10,"Written by: Ethan",
                         " Rietz",13,10,13,10,"Please provide 10 signed decimal",
                         " integers.",13,10,"Each number needs to be small enough",
                         " to fit inside a 32 bit register. After you have finished",
                         " inputting the raw numbers, I will display a list of",
                         " the integers, their sum, and their average value.",13,10,13,10,0
 
-promptInput     byte    "Please enter a signed number: ",0
+strPrompt       byte    "Please enter a signed number: ",0
 userInput       byte    MAX_LENGTH dup(?)
 byteCount       dword   ?
 
 userValues      sdword  NUM_INTS dup(?)
 userValue       sdword  ?
+strUserValue    byte    MAX_LENGTH dup(?)
 
 sum             sdword  ?
 average         sdword  ?
@@ -81,11 +80,13 @@ strClosing      byte    "Thanks for playing!!!",0
 
 strInvalid      byte    "Number Invalid... Try again",13,10,0
 
+negative        dword   0
+
 .code
 main PROC
 
     ; Print the program title, introduction, and instructions to user.----------
-    mov     edx, offset introTitle
+    mov     edx, offset strIntro
     call    WriteString
 
 
@@ -94,7 +95,7 @@ main PROC
     mov     edi, offset userValues
     _getNumbers:
         ; reads users string into userValue
-        push    offset promptInput  ; +16
+        push    offset strPrompt  ; +16
         push    offset userInput    ; +12
         push    offset byteCount    ; +8
         push    offset userValue    ; +4
@@ -125,8 +126,12 @@ main PROC
         add     sum, ebx
         add     esi, type userValues
 
-        mov     eax, ebx
-        call    WriteInt
+        ;mov     eax, ebx
+        ;call    WriteInt
+        push    ebx
+        push    offset strUserValue
+        push    lengthof strUserValue
+        call    WriteVal
         call    CrLf
 
         loop    _calculateSum
@@ -139,19 +144,28 @@ main PROC
         mov     average, eax
 
     mDisplayString  offset strTheSumIs
-    mov     eax, sum
-    call    WriteInt
+
+    push    sum
+    push    offset strUserValue
+    push    lengthof strUserValue
+    call    WriteVal
+    ;mov     eax, sum
+    ;call    WriteInt
     call    CrLf
 
     mDisplayString  offset strTheAvgIs
-    mov     eax, average
-    call    WriteInt
+
+    push    average
+    push    offset strUserValue
+    push    lengthof strUserValue
+    call    WriteVal
+    ;mov     eax, average
+    ;call    WriteInt
     call    CrLf
 
     mDisplayString  offset strClosing
 
-
-    ;mGetString  offset promptInput, offset userInput, offset byteCount
+    ;mGetString  offset strPrompt, offset userInput, offset byteCount
     ;mDisplayString  offset userInput
     ;mov     eax, byteCount
     ;call    WriteDec
@@ -160,7 +174,7 @@ main PROC
 main ENDP
 
 ReadVal     proc
-    ;[ebp+20] = promptInput
+    ;[ebp+20] = strPrompt
     ;[ebp+16] = userInput
     ;[ebp+12] = byteCount
     ;[ebp+8]  = userValue (output)
@@ -221,6 +235,7 @@ ReadVal     proc
 
             _numberIsInvalid:
                 push    edx
+                ; TODO: can't use strInvalid without reference
                 mov     edx, offset strInvalid
                 call    WriteString
                 pop     edx
@@ -241,33 +256,52 @@ ReadVal     proc
 ReadVal     endp
 
 WriteVal    proc
+    ; ebp+16 = value of sdword
+    ; ebp+12 = address of strUserValue
+    ; ebp+8  = length of strUserValue
     push    ebp
     mov     ebp, esp
     pushad
 
+
+    mov     negative, 0  ; negative
+    mov     edi, [ebp+12]
+    add     edi, [ebp+8]
+    dec     edi
+    std
+    mov     al, 0
+    stosb
+    mov     eax, [ebp+16]
+    mov     ebx, 10
+    add     eax, 0
+    jns     _loop
+    mov     negative, 1
+    neg     eax
+
+    _loop:
+        cdq
+        idiv    ebx
+        add     edx, 48
+        push    eax
+        mov     al, dl
+        stosb
+        pop     eax
+        cmp     eax, 0
+        jne    _loop
+
+    cmp     negative, 1
+
+    ;JNE     _something
+    ;mov     al, 45
+    ;stosb
+
+    ;_something:
+        inc     edi
+        mDisplayString  edi
+
     popad
     pop     ebp
-    ret     
+    ret     12
 WriteVal     endp
-
-calcAverage     proc
-    push    ebp
-    mov     ebp, esp
-    pushad
-
-    popad
-    pop     ebp
-    ret     
-calcAverage     endp
-
-displayResults  proc
-    push    ebp
-    mov     ebp, esp
-    pushad
-
-    popad
-    pop     ebp
-    ret     
-displayResults  endp
 
 END main
