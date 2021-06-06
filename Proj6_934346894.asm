@@ -89,10 +89,10 @@ main PROC
     mov     edx, offset strIntro
     call    WriteString
 
-
     ; Get values from the user--------------------------------------------------
     mov     ecx, NUM_INTS
     mov     edi, offset userValues
+
     _getNumbers:
         ; reads users string into userValue
         push    offset strInvalid   ; +20
@@ -105,20 +105,11 @@ main PROC
         mov     ebx, userValue
         mov     [edi], ebx
         add     edi, type userValues
-
-        ;mov     edx, offset userInput
-        ;call    WriteString
-        ;call    CrLf
-        ;mov     eax, byteCount
-        ;call    WriteDec
-        ;call    CrLf
-        ;mov     eax, userValue
-        ;call    WriteInt
-
         loop    _getNumbers
+
     call    CrLf
 
-    ; Calculate sum, average, and display results-------------------------------
+    ; Calculate sum and print out users values----------------------------------
     mDisplayString  offset strYouEntered
     call    CrLf
 
@@ -128,9 +119,6 @@ main PROC
         mov     ebx, [esi]
         add     sum, ebx
         add     esi, type userValues
-
-        ;mov     eax, ebx
-        ;call    WriteInt
         push    ebx
         push    offset strUserValue
         push    lengthof strUserValue
@@ -145,6 +133,7 @@ main PROC
             call    CrLf
             call    CrLf
 
+    ; Calculate the average-----------------------------------------------------
     _calculateAvg:
         mov     eax, sum
         mov     ebx, NUM_INTS
@@ -152,33 +141,27 @@ main PROC
         idiv    ebx
         mov     average, eax
 
+    ; Display the sum of the numbers--------------------------------------------
     mDisplayString  offset strTheSumIs
 
     push    sum
     push    offset strUserValue
     push    lengthof strUserValue
     call    WriteVal
-    ;mov     eax, sum
-    ;call    WriteInt
     call    CrLf
 
+    ; Display the average of the numbers----------------------------------------
     mDisplayString  offset strTheAvgIs
 
     push    average
     push    offset strUserValue
     push    lengthof strUserValue
     call    WriteVal
-    ;mov     eax, average
-    ;call    WriteInt
     call    CrLf
     call    CrLf
 
+    ; Print a farewell message--------------------------------------------------
     mDisplayString  offset strClosing
-
-    ;mGetString  offset strPrompt, offset userInput, offset byteCount
-    ;mDisplayString  offset userInput
-    ;mov     eax, byteCount
-    ;call    WriteDec
 
     Invoke ExitProcess,0    ; exit to operating system
 main ENDP
