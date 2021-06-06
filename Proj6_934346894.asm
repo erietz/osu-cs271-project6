@@ -7,10 +7,37 @@ TITLE FIXME     (FIXME.asm)
 ; Project Number        : 6
 ; Due Date              : 2021-06-6
 ; Description           : \
-;   FIXME
+;   Prompts a user to enter 10 signed integers and prints the numbers, their
+;   sum, and their average. If the user inputs a numbers that is too large or
+;   too small to fit in a 32 bit register, or the user enters characters that
+;   are not 0-9, they are repeatedly prompted to enter valid numbers. This
+;   program uses Irvines ReadString and WriteString to get the user input, but
+;   uses custom procedures to store the ascii strings as signed integers
+;   internally. To print out the signed integers, the program internally
+;   converts the signed integers back to ascii strings.
 
 INCLUDE Irvine32.inc
 
+; -----------------------------------------------------------------------------
+; Name: mGetString
+;
+; This macro prompts the user using Irvine's WriteString procedure to input a
+; string and then reads a string of length MAX_LENGTH from the user using
+; Irvines ReadString procedure and stores the result.
+;
+; Preconditions: 
+;
+; Postconditions: 
+;
+; Receives: 
+;   - Address of the prompt string passed on the stack
+;   - Address of a byte array to store the result in passed on the stack
+;   - Address of a dword variable to store the number of bytes of the string 
+;       that has been read in
+;   - Global constant MAX_LENGTH
+;
+; Returns: 
+; -----------------------------------------------------------------------------
 mGetString  macro promptAddr, userInputAddr, byteCountAddr
     push    edx
     push    ecx
@@ -51,7 +78,7 @@ endm
 MAX_LENGTH = 20
 ; Read 10 ints from user
 ; TODO: set to 10
-NUM_INTS = 3
+NUM_INTS = 10
 
 .data
 
@@ -70,7 +97,6 @@ byteCount       dword   ?
 
 userValues      sdword  NUM_INTS dup(?)
 userValue       sdword  ?
-;userValueSign   dword   0   ; sign of userValue (1 if negative; 0 if positive)
 strUserValue    byte    MAX_LENGTH dup(?)
 
 sum             sdword  ?
@@ -140,7 +166,7 @@ main PROC
     _calculateAvg:
         mov     eax, sum
         mov     ebx, NUM_INTS
-        cdq     ;TODO: what does this do?
+        cdq     ; sign extend eax into edx for 32 bit signed division
         idiv    ebx
         mov     average, eax
 
@@ -185,11 +211,12 @@ ReadVal     proc
         mGetString  [ebp+20], [ebp+16], [ebp+12]
 
     mov     userValueSign, 0    ; set to False for number being negative
+    mov     multiplier, 10      ; repeatedly multiply by 10 in loop
     mov     eax, 0              ; initialize eax for string processing
     mov     ebx, 0              ; sum of digits
-    mov     multiplier, 10      ; repeatedly multiply by 10 in loop
-    mov     esi, [ebp+16]
+    mov     esi, [ebp+16]       ; point lodsb to the start of userInput
     mov     ecx, byteCount
+    cld
 
     _checkDigit:
         lodsb
@@ -235,11 +262,11 @@ ReadVal     proc
     _storeValue:
         cmp     userValueSign, 1
         jne      _checkTooBig
-        neg     ebx
 
         _checkTooSmall:
             cmp     ebx, 80000000h
-            jb      _magnitudeTooLarge
+            ja      _magnitudeTooLarge
+            neg     ebx
             jmp     _actuallyStoreNum
 
         _checkTooBig:
@@ -260,7 +287,7 @@ ReadVal     proc
 ReadVal     endp
 
 WriteVal    proc
-    LOCAL userValueSign:dword
+    LOCAL userValueSign:dword, divisor:dword
     pushad
     ; ebp+16 = value of sdword
     ; ebp+12 = address of strUserValue
@@ -275,7 +302,8 @@ WriteVal    proc
     mov     al, 0
     stosb
     mov     eax, [ebp+16]
-    mov     ebx, 10
+    mov     divisor, 10
+    mov     edx, 0          ; clear out to store remainder of divisions
     add     eax, 0
     jns     _loop
     mov     userValueSign, 1
@@ -285,16 +313,14 @@ WriteVal    proc
     ; looping from the right side until we hit a 0. This means we have printed
     ; all of the number
     _loop:
-        ; TODO: what does this do?
-        cdq
-        ;idiv    ebx
-        div    ebx
+        div    divisor
         add     edx, 48
         push    eax
         mov     al, dl
         stosb
         pop     eax
 
+        mov     edx, 0      ; clear out to store remainder of division
         cmp     eax, 0
         jne    _loop
 
