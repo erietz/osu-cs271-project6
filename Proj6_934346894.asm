@@ -84,7 +84,7 @@ endm
 ; This is equivilent to -2147483648 (8000 0001h) to +2147483647 (7FFF FFFFh) or
 ; 10 characters + sign + null terminator = 12 characters.. However, the user
 ; could enter a number with leading zeros like 000002 which would be 6
-; characters but only really 2.  MAX_LENGTH will be set higher than 12 to allow
+; characters but only really 2. MAX_LENGTH will be set higher than 12 to allow
 ; leading zeros.
 ;
 MAX_LENGTH = 20
@@ -138,7 +138,7 @@ main PROC
         push    offset userInput    ; +12
         push    offset byteCount    ; +8
         push    offset userValue    ; +4
-        call    ReadVal             ; should return 4*4 = 16
+        call    ReadVal             ; should return 4*5 = 20
         ; fill position in userValues with userValue
         mov     ebx, userValue
         mov     [edi], ebx
@@ -152,19 +152,20 @@ main PROC
     call    CrLf
 
     ; loop through userValues, print value, and add to sum
-    mov     esi, offset userValues  
+    mov     esi, offset userValues  ; loop through each of userValues
     mov     ecx, NUM_INTS
     _calculateSum:
+        ; add to the sum and prepare for next iteration
         mov     ebx, [esi]
         add     sum, ebx
         add     esi, type userValues
         ; actually print the value
-        push    ebx
-        push    offset strUserValue
-        push    lengthof strUserValue
+        push    ebx                     ; send value to WriteVal
+        push    offset strUserValue     ; string version will be written to strUserValue
+        push    lengthof strUserValue   ; need to know length of string
         call    WriteVal
 
-        cmp     ecx, 1
+        cmp     ecx, 1                  ; don't print delimiter on last iteration
         je      _endLoop
         mDisplayString  offset strDelimeter
         loop    _calculateSum
@@ -175,7 +176,7 @@ main PROC
 
     ; Calculate the average-----------------------------------------------------
     _calculateAvg:
-        mov     eax, sum
+        mov     eax, sum        ; average is sum/NUM_INTS
         mov     ebx, NUM_INTS
         cdq     ; sign extend eax into edx for 32 bit signed division
         idiv    ebx
@@ -184,8 +185,8 @@ main PROC
     ; Display the sum of the numbers--------------------------------------------
     mDisplayString  offset strTheSumIs
 
-    push    sum
-    push    offset strUserValue
+    push    sum                     ; display value of sum
+    push    offset strUserValue     ; store string version of sum in strUserValue
     push    lengthof strUserValue
     call    WriteVal
     call    CrLf
@@ -193,8 +194,8 @@ main PROC
     ; Display the average of the numbers----------------------------------------
     mDisplayString  offset strTheAvgIs
 
-    push    average
-    push    offset strUserValue
+    push    average                 ; display value of average
+    push    offset strUserValue     ; store average as string in strUserValue
     push    lengthof strUserValue
     call    WriteVal
     call    CrLf
@@ -206,7 +207,33 @@ main PROC
     Invoke ExitProcess,0    ; exit to operating system
 main ENDP
 
+; -----------------------------------------------------------------------------
+; Name: ReadVal
+;
+; Reads a signed integer from the user and stores the results in one of the
+; passed variable as a SDWORD. If the integer is too large to fit in a 32 bit
+; register, the user is prompted again. The string version of the user input is
+; also stored in a passed variable in addition to the length of the passed
+; string.
+;
+; Preconditions: The macro mGetString needs to be defined to get a string 
+;                and length of the string from the user.
+;
+; Receives:
+;   1) address of string to display an invalid message if number is out of range
+;   2) address of string to prompt the user to enter a number
+;   3) address of string to store the string version of the user input
+;   4) address of a dword variable to store the length of users entered string
+;   5) address of a sdword variable to store the validated signed value
+;
+; Returns:
+;   - ascii representation of string is stored in (3)
+;   - number of bytes read from the user's string stored in (4)
+;   - signed integer stored in (5)
+; -----------------------------------------------------------------------------
 ReadVal     proc
+    ;userValueSign set to 1 if number is negative, otherwise 0
+    ;multiplier is set to 10
     LOCAL userValueSign:dword, multiplier:dword
     pushad
     ;[ebp+24] = strInvalid (input)
@@ -224,30 +251,30 @@ ReadVal     proc
     mov     userValueSign, 0    ; set to False for number being negative
     mov     multiplier, 10      ; repeatedly multiply by 10 in loop
     mov     eax, 0              ; initialize eax for string processing
-    mov     ebx, 0              ; sum of digits
+    mov     ebx, 0              ; sum of digits stored in ebx through loop
     mov     esi, [ebp+16]       ; point lodsb to the start of userInput
-    mov     ecx, byteCount
-    cld
+    mov     ecx, byteCount      ; loop through length of passed string
+    cld                         ; clear direction flag for string primitive
 
     _checkDigit:
-        lodsb
-        cmp     ecx, byteCount
+        lodsb                   ; load digit into al
+        cmp     ecx, byteCount  ; first digit could be either "+" or "-"
         je      _firstCharacter
         jmp     _notFirstCharacter
 
         _firstCharacter:
-            cmp     al, 45  ; ascii 45 is equal to "-" 
+            cmp     al, 45      ; ascii 45 is equal to "-" 
             je      _negative
-            cmp     al, 43  ; ascii 43 is equal to "+"
+            cmp     al, 43      ; ascii 43 is equal to "+"
             je      _positive
-            jmp     _notFirstCharacter
+            jmp     _notFirstCharacter  ; need to check if char is between 0-9
 
             _negative:
-                mov     userValueSign, 1
-                loop     _checkDigit
+                mov     userValueSign, 1    ; set local flag to negative
+                loop     _checkDigit        ; continue
 
             _positive:
-                loop    _checkDigit
+                loop    _checkDigit         ; continue
 
         _notFirstCharacter:
             cmp     al, 48  ; ascii 48 is equal to 0
@@ -256,89 +283,109 @@ ReadVal     proc
             jg      _numberIsInvalid
 
             _numberIsValid:
-                sub     al, 48  ; convert ascii [48-57] to digit [0-9]
-                push    eax
-                mov     eax, ebx
+                sub     al, 48          ; convert ascii [48-57] to digit [0-9]
+                push    eax             ; multiplication requires eax also
+                mov     eax, ebx        ; multiply sum by 10 and add digit
                 mul     multiplier
                 mov     ebx, eax
                 pop     eax
                 add     ebx, eax
-                loop    _checkDigit
-                jmp     _storeValue
+                loop    _checkDigit         ; check next digit
+                jmp     _storeValue         ; skip next stuff at end of loop
 
             _numberIsInvalid:
-                mDisplayString  [ebp+24]
+                mDisplayString  [ebp+24]    ; print string is invalid
                 jmp     _promptForInput
 
     _storeValue:
         cmp     userValueSign, 1
         jne      _checkTooBig
 
-        _checkTooSmall:
-            cmp     ebx, 80000000h
+        _checkTooSmall:                 ; if negative, compare to -2147483648
+            cmp     ebx, 80000000h      ; do unsigned comparison, then convert to signed
             ja      _magnitudeTooLarge
             neg     ebx
             jmp     _actuallyStoreNum
 
         _checkTooBig:
-            cmp     ebx, 7FFFFFFFh
+            cmp     ebx, 7FFFFFFFh          ; if positive compare to +2147483647
             ja      _magnitudeTooLarge
             jmp     _actuallyStoreNum
 
-            _magnitudeTooLarge:
-                mDisplayString  [ebp+24]
-                jmp     _promptForInput
+            _magnitudeTooLarge:             ; num can't fit in 32 bit register
+                mDisplayString  [ebp+24]    ; inform user
+                jmp     _promptForInput     ; ask for another number
 
         _actuallyStoreNum:
-            mov     edi, [ebp+8]
-            mov     [edi], ebx
+            mov     edi, [ebp+8]            ; move index to userValue
+            mov     [edi], ebx              ; store number at index
 
     popad
     ret     20
 ReadVal     endp
 
+; -----------------------------------------------------------------------------
+; Name: WriteVal
+;
+; Loads an SDWORD from memory, converts to a string and displays the string to
+; the console.
+;
+; Preconditions: The macro mDisplayString need to be defined to display a
+;                string passed by address.
+;
+; Receives:
+;   1) value of sdword
+;   2) address of start of byte array to store ascii representation of SDWORD
+;      into
+;   3) value of the length of the byte array in (2)
+;
+; Returns:
+;   - byte array (2) will be overwritten with the string representation of the
+;     passed SDWORD
+; -----------------------------------------------------------------------------
 WriteVal    proc
+    ; userValueSign is a flag set to 1 if number is negative, otherwise 0
+    ; divisor is set to 10 for repeated divisions in algorithm
     LOCAL userValueSign:dword, divisor:dword
     pushad
     ; ebp+16 = value of sdword
     ; ebp+12 = address of strUserValue
     ; ebp+8  = length of strUserValue
 
-
-    mov     userValueSign, 0  ; negative
-    mov     edi, [ebp+12]
-    add     edi, [ebp+8]
-    dec     edi
-    std
-    mov     al, 0
-    stosb
-    mov     eax, [ebp+16]
+    mov     userValueSign, 0    ; set flag to initially be positive
+    mov     edi, [ebp+12]       ; start address of array where string is stored
+    add     edi, [ebp+8]        ; move index to end of array
+    dec     edi                 ; index is index - 1
+    std                         ; set direction flag to loop backwards
+    mov     al, 0               ; string primitives stored in al
+    stosb                       ; copy value in edi to al and increment edi
+    mov     eax, [ebp+16]       ; load value of val
     mov     divisor, 10
-    mov     edx, 0          ; clear out to store remainder of divisions
-    add     eax, 0
+    mov     edx, 0              ; clear out to store remainder of divisions
+    add     eax, 0              ; check to see if val is negative
     jns     _loop
-    mov     userValueSign, 1
+    mov     userValueSign, 1    ; if we didn't jump, val is negative
     neg     eax
 
     ; The number 2134 will be stored in memory like "00000856" so we must keep
     ; looping from the right side until we hit a 0. This means we have printed
     ; all of the number
     _loop:
-        div    divisor
-        add     edx, 48
-        push    eax
+        div    divisor          ; eax holds val
+        add     edx, 48         ; convert digit to ascii
+        push    eax             ; division uses eax
         mov     al, dl
         stosb
         pop     eax
 
-        mov     edx, 0      ; clear out to store remainder of division
-        cmp     eax, 0
+        mov     edx, 0          ; clear out to store remainder of next division
+        cmp     eax, 0          ; when we get to 0/10, we are done
         jne    _loop
 
     cmp     userValueSign, 0
 
     je     _positive
-    ; print out a minus sign
+    ; store a minus sign
     mov     al, 45  ; ascii 45 is equal to "-"
     stosb
 
