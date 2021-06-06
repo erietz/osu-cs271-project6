@@ -68,6 +68,7 @@ byteCount       dword   ?
 
 userValues      sdword  NUM_INTS dup(?)
 userValue       sdword  ?
+userValueSign   dword   0   ; sign of userValue (1 if negative; 0 if positive)
 strUserValue    byte    MAX_LENGTH dup(?)
 
 sum             sdword  ?
@@ -79,8 +80,7 @@ strTheAvgIs     byte    "The rounded average is:      ",0
 strClosing      byte    "Thanks for playing!!!",0
 
 strInvalid      byte    "Number Invalid... Try again",13,10,0
-
-negative        dword   0
+strDelimeter    byte    ", ",0
 
 .code
 main PROC
@@ -95,7 +95,8 @@ main PROC
     mov     edi, offset userValues
     _getNumbers:
         ; reads users string into userValue
-        push    offset strPrompt  ; +16
+        push    offset strInvalid   ; +20
+        push    offset strPrompt    ; +16
         push    offset userInput    ; +12
         push    offset byteCount    ; +8
         push    offset userValue    ; +4
@@ -115,9 +116,11 @@ main PROC
         ;call    WriteInt
 
         loop    _getNumbers
+    call    CrLf
 
     ; Calculate sum, average, and display results-------------------------------
     mDisplayString  offset strYouEntered
+    call    CrLf
 
     mov     esi, offset userValues
     mov     ecx, NUM_INTS
@@ -132,9 +135,15 @@ main PROC
         push    offset strUserValue
         push    lengthof strUserValue
         call    WriteVal
-        call    CrLf
 
+        cmp     ecx, 1
+        je      _endLoop
+        mDisplayString  offset strDelimeter
         loop    _calculateSum
+
+        _endLoop:
+            call    CrLf
+            call    CrLf
 
     _calculateAvg:
         mov     eax, sum
@@ -162,6 +171,7 @@ main PROC
     ;mov     eax, average
     ;call    WriteInt
     call    CrLf
+    call    CrLf
 
     mDisplayString  offset strClosing
 
@@ -187,9 +197,10 @@ ReadVal     proc
     _promptForInput:
         mGetString  [ebp+20], [ebp+16], [ebp+12]
 
-    mov     ebx, 0  ; set to False for number being negative
+    mov     userValueSign, 0  ; set to False for number being negative
     mov     eax, 0  ; initialize eax for string processing
     mov     edx, 0  ; sum of digits
+    mov     ebx, 10 ; repeatedly multiply by 10 in loop
     mov     esi, [ebp+16]
     mov     ecx, byteCount
     ; for looping throug in reverse
@@ -207,26 +218,28 @@ ReadVal     proc
         _firstCharacter:
             cmp     al, 45  ; "-"
             je      _negative
+            cmp     al, 43  ; "+"
+            je      _positive
             jmp     _notFirstCharacter
 
             _negative:
-                mov     ebx, 1
+                mov     userValueSign, 1
                 loop     _checkDigit
 
+            _positive:
+                loop    _checkDigit
+
         _notFirstCharacter:
-            cmp     al, 48
+            cmp     al, 48  ; ascii 48 is equal to 0
             jl      _numberIsInvalid
-            cmp     al, 57
+            cmp     al, 57  ; ascii 57 is equal to 9
             jg      _numberIsInvalid
 
             _numberIsValid:
-                sub     al, 48
+                sub     al, 48  ; convert ascii [48-57] to digit [0-9]
                 push    eax
                 mov     eax, edx
-                push    ebx
-                mov     ebx, 10
                 mul     ebx
-                pop     ebx
                 mov     edx, eax
                 pop     eax
                 add     edx, eax
@@ -234,15 +247,16 @@ ReadVal     proc
                 jmp     _storeValue
 
             _numberIsInvalid:
-                push    edx
-                ; TODO: can't use strInvalid without reference
-                mov     edx, offset strInvalid
-                call    WriteString
-                pop     edx
+                ;push    edx
+                ;; TODO: can't use strInvalid without reference
+                ;mov     edx, offset [ebp+20]
+                ;call    WriteString
+                ;pop     edx
+                mDisplayString  [ebp+24]
                 jmp     _promptForInput
 
     _storeValue:
-        cmp     ebx, 1
+        cmp     userValueSign, 1
         jne      _storePositive
         neg     edx
 
@@ -252,7 +266,7 @@ ReadVal     proc
 
     popad
     pop     ebp
-    ret     16
+    ret     20
 ReadVal     endp
 
 WriteVal    proc
@@ -264,7 +278,7 @@ WriteVal    proc
     pushad
 
 
-    mov     negative, 0  ; negative
+    mov     userValueSign, 0  ; negative
     mov     edi, [ebp+12]
     add     edi, [ebp+8]
     dec     edi
@@ -275,7 +289,7 @@ WriteVal    proc
     mov     ebx, 10
     add     eax, 0
     jns     _loop
-    mov     negative, 1
+    mov     userValueSign, 1
     neg     eax
 
     _loop:
@@ -289,13 +303,13 @@ WriteVal    proc
         cmp     eax, 0
         jne    _loop
 
-    cmp     negative, 1
+    cmp     userValueSign, 0
 
-    ;JNE     _something
-    ;mov     al, 45
-    ;stosb
+    je     _positive
+    mov     al, 45
+    stosb
 
-    ;_something:
+    _positive:
         inc     edi
         mDisplayString  edi
 
