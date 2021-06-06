@@ -40,15 +40,17 @@ mDisplayString  macro stringAddr
     pop     edx
 endm
 
-; (insert constant definitions here)
-;
 ; An SDWORD is 32 bits and can hold numbers in the range from -2^31 to 2^31 - 1.
-; This is equivilent to -2147483648 to +2147483647
 ;
-; ReadString seems to only read 10 so adding 1 plus an extra to check if too
-; long
-MAX_LENGTH = 11 + 2     
+; This is equivilent to -2147483648 (8000 0001h) to +2147483647 (7FFF FFFFh) or
+; 10 characters + sign + null terminator = 12 characters.. However, the user
+; could enter a number with leading zeros like 000002 which would be 6
+; characters but only really 2.  MAX_LENGTH will be set higher than 12 to allow
+; leading zeros.
+;
+MAX_LENGTH = 20
 ; Read 10 ints from user
+; TODO: set to 10
 NUM_INTS = 3
 
 .data
@@ -62,13 +64,13 @@ strIntro        byte    "String Primitives and Macros",13,10,"Written by: Ethan"
                         " inputting the raw numbers, I will display a list of",
                         " the integers, their sum, and their average value.",13,10,13,10,0
 
-strPrompt       byte    "Please enter a signed number: ",0
+strPrompt       byte    "Please enter a signed number (of this form [+-]\d+): ",0
 userInput       byte    MAX_LENGTH dup(?)
 byteCount       dword   ?
 
 userValues      sdword  NUM_INTS dup(?)
 userValue       sdword  ?
-userValueSign   dword   0   ; sign of userValue (1 if negative; 0 if positive)
+;userValueSign   dword   0   ; sign of userValue (1 if negative; 0 if positive)
 strUserValue    byte    MAX_LENGTH dup(?)
 
 sum             sdword  ?
@@ -79,7 +81,8 @@ strTheSumIs     byte    "The sum of these numbers is: ",0
 strTheAvgIs     byte    "The rounded average is:      ",0
 strClosing      byte    "Thanks for playing!!!",0
 
-strInvalid      byte    "Number Invalid... Try again",13,10,0
+strInvalid      byte    "ERROR: You did not enter a signed number or your",
+                        " number was too big or too small.",13,10,0
 strDelimeter    byte    ", ",0
 
 .code
@@ -167,41 +170,37 @@ main PROC
 main ENDP
 
 ReadVal     proc
-    ;[ebp+20] = strPrompt
-    ;[ebp+16] = userInput
-    ;[ebp+12] = byteCount
-    ;[ebp+8]  = userValue (output)
-    push    ebp
-    mov     ebp, esp
+    LOCAL userValueSign:dword, multiplier:dword
     pushad
-
+    ;[ebp+24] = strInvalid (input)
+    ;[ebp+20] = strPrompt (input)
+    ;[ebp+16] = userInput (output)
+    ;[ebp+12] = byteCount (output)
+    ;[ebp+8]  = userValue (output)
 
     ; The number 3945 = 3E3 + 9E2 + 4E1 + 5E0
+    ; Here we are storing 3945 as string by taking each digit, multiping by 10,
+    ; and adding it to a sum.
     _promptForInput:
         mGetString  [ebp+20], [ebp+16], [ebp+12]
 
-    mov     userValueSign, 0  ; set to False for number being negative
-    mov     eax, 0  ; initialize eax for string processing
-    mov     edx, 0  ; sum of digits
-    mov     ebx, 10 ; repeatedly multiply by 10 in loop
+    mov     userValueSign, 0    ; set to False for number being negative
+    mov     eax, 0              ; initialize eax for string processing
+    mov     ebx, 0              ; sum of digits
+    mov     multiplier, 10      ; repeatedly multiply by 10 in loop
     mov     esi, [ebp+16]
     mov     ecx, byteCount
-    ; for looping throug in reverse
-    ;add     esi, ecx
-    ;dec     esi
-    cld     ; clear direction flag
 
     _checkDigit:
-        ;std     ; set direction flag to decrement ESI and EDI for string instructions 
         lodsb
         cmp     ecx, byteCount
         je      _firstCharacter
         jmp     _notFirstCharacter
 
         _firstCharacter:
-            cmp     al, 45  ; "-"
+            cmp     al, 45  ; ascii 45 is equal to "-" 
             je      _negative
-            cmp     al, 43  ; "+"
+            cmp     al, 43  ; ascii 43 is equal to "+"
             je      _positive
             jmp     _notFirstCharacter
 
@@ -221,44 +220,51 @@ ReadVal     proc
             _numberIsValid:
                 sub     al, 48  ; convert ascii [48-57] to digit [0-9]
                 push    eax
-                mov     eax, edx
-                mul     ebx
-                mov     edx, eax
+                mov     eax, ebx
+                mul     multiplier
+                mov     ebx, eax
                 pop     eax
-                add     edx, eax
+                add     ebx, eax
                 loop    _checkDigit
                 jmp     _storeValue
 
             _numberIsInvalid:
-                ;push    edx
-                ;; TODO: can't use strInvalid without reference
-                ;mov     edx, offset [ebp+20]
-                ;call    WriteString
-                ;pop     edx
                 mDisplayString  [ebp+24]
                 jmp     _promptForInput
 
     _storeValue:
         cmp     userValueSign, 1
-        jne      _storePositive
-        neg     edx
+        jne      _checkTooBig
+        neg     ebx
 
-        _storePositive:
+        _checkTooSmall:
+            cmp     ebx, 80000000h
+            jb      _magnitudeTooLarge
+            jmp     _actuallyStoreNum
+
+        _checkTooBig:
+            cmp     ebx, 7FFFFFFFh
+            ja      _magnitudeTooLarge
+            jmp     _actuallyStoreNum
+
+            _magnitudeTooLarge:
+                mDisplayString  [ebp+24]
+                jmp     _promptForInput
+
+        _actuallyStoreNum:
             mov     edi, [ebp+8]
-            mov     [edi], edx
+            mov     [edi], ebx
 
     popad
-    pop     ebp
     ret     20
 ReadVal     endp
 
 WriteVal    proc
+    LOCAL userValueSign:dword
+    pushad
     ; ebp+16 = value of sdword
     ; ebp+12 = address of strUserValue
     ; ebp+8  = length of strUserValue
-    push    ebp
-    mov     ebp, esp
-    pushad
 
 
     mov     userValueSign, 0  ; negative
@@ -275,21 +281,28 @@ WriteVal    proc
     mov     userValueSign, 1
     neg     eax
 
+    ; The number 2134 will be stored in memory like "00000856" so we must keep
+    ; looping from the right side until we hit a 0. This means we have printed
+    ; all of the number
     _loop:
+        ; TODO: what does this do?
         cdq
-        idiv    ebx
+        ;idiv    ebx
+        div    ebx
         add     edx, 48
         push    eax
         mov     al, dl
         stosb
         pop     eax
+
         cmp     eax, 0
         jne    _loop
 
     cmp     userValueSign, 0
 
     je     _positive
-    mov     al, 45
+    ; print out a minus sign
+    mov     al, 45  ; ascii 45 is equal to "-"
     stosb
 
     _positive:
@@ -297,7 +310,6 @@ WriteVal    proc
         mDisplayString  edi
 
     popad
-    pop     ebp
     ret     12
 WriteVal     endp
 
