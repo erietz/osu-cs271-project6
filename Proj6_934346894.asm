@@ -25,18 +25,19 @@ INCLUDE Irvine32.inc
 ; string and then reads a string of length MAX_LENGTH from the user using
 ; Irvines ReadString procedure and stores the result.
 ;
-; Preconditions: 
-;
 ; Postconditions: 
 ;
 ; Receives: 
-;   - Address of the prompt string passed on the stack
-;   - Address of a byte array to store the result in passed on the stack
-;   - Address of a dword variable to store the number of bytes of the string 
-;       that has been read in
+;   - promptAddr    = Address of the prompt string passed on the stack
+;   - userInputAddr = Address of a byte array to store the result in passed on 
+;                     the stack
+;   - byteCountAddr = Address of a dword variable to store the number of bytes 
+;                     of the string that has been read in
 ;   - Global constant MAX_LENGTH
 ;
 ; Returns: 
+;   - userInputAddr points to the start of the string that has been read
+;   - byteCountAddr points to the number of bytes read
 ; -----------------------------------------------------------------------------
 mGetString  macro promptAddr, userInputAddr, byteCountAddr
     push    edx
@@ -60,6 +61,17 @@ mGetString  macro promptAddr, userInputAddr, byteCountAddr
     pop     edx
 endm
 
+; -----------------------------------------------------------------------------
+; Name: mDisplayString
+;
+; Takes an address of a byte string and prints it to the console using Irvine's
+; WriteString procedure
+;
+; Receives: 
+;   - stringAddr = the address of the string to print
+;
+; Returns: None
+; -----------------------------------------------------------------------------
 mDisplayString  macro stringAddr
     push    edx
     mov     edx, stringAddr
@@ -76,9 +88,7 @@ endm
 ; leading zeros.
 ;
 MAX_LENGTH = 20
-; Read 10 ints from user
-; TODO: set to 10
-NUM_INTS = 10
+NUM_INTS = 10   ; Read 10 ints from user
 
 .data
 
@@ -109,17 +119,16 @@ strClosing      byte    "Thanks for playing!!!",0
 
 strInvalid      byte    "ERROR: You did not enter a signed number or your",
                         " number was too big or too small.",13,10,0
-strDelimeter    byte    ", ",0
+strDelimeter    byte    ", ",0  ; used to print the numbers in a line
 
 .code
 main PROC
 
     ; Print the program title, introduction, and instructions to user.----------
-    mov     edx, offset strIntro
-    call    WriteString
+    mDisplayString  offset strIntro
 
     ; Get values from the user--------------------------------------------------
-    mov     ecx, NUM_INTS
+    mov     ecx, NUM_INTS           ; fill the array userValues of length NUM_INTS
     mov     edi, offset userValues
 
     _getNumbers:
@@ -133,7 +142,7 @@ main PROC
         ; fill position in userValues with userValue
         mov     ebx, userValue
         mov     [edi], ebx
-        add     edi, type userValues
+        add     edi, type userValues    ; prepare to fill next index
         loop    _getNumbers
 
     call    CrLf
@@ -142,12 +151,14 @@ main PROC
     mDisplayString  offset strYouEntered
     call    CrLf
 
-    mov     esi, offset userValues
+    ; loop through userValues, print value, and add to sum
+    mov     esi, offset userValues  
     mov     ecx, NUM_INTS
     _calculateSum:
         mov     ebx, [esi]
         add     sum, ebx
         add     esi, type userValues
+        ; actually print the value
         push    ebx
         push    offset strUserValue
         push    lengthof strUserValue
