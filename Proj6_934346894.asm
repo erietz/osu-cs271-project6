@@ -248,15 +248,21 @@ ReadVal     proc
 
     mov     userValueSign, 0    ; set to False for number being negative
     mov     multiplier, 10      ; repeatedly multiply by 10 in loop
-    mov     eax, 0              ; initialize eax for string processing
     mov     ebx, 0              ; sum of digits stored in ebx through loop
     mov     esi, [ebp+16]       ; point lodsb to the start of userInput
-    mov     ecx, byteCount      ; loop through length of passed string
+    mov     eax, [ebp+12]       ; store value of byteCount
+    mov     ecx, [eax]          ; loop through length of passed string
+    cmp     ecx, 12
+    ja      _numberIsInvalid
+    mov     eax, 0              ; initialize eax for string processing
     cld                         ; clear direction flag for string primitive
 
     _checkDigit:
         lodsb                   ; load digit into al
-        cmp     ecx, byteCount  ; first digit could be either "+" or "-"
+        push    eax             ; save value of eax
+        mov     eax, [ebp+12]   ; load into eax byteCount
+        cmp     ecx, [eax]      ; first digit could be either "+" or "-"
+        pop     eax             ; return saved value of eax
         je      _firstCharacter
         jmp     _notFirstCharacter
 
