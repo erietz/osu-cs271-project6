@@ -25,8 +25,6 @@ INCLUDE Irvine32.inc
 ; string and then reads a string of length MAX_LENGTH from the user using
 ; Irvines ReadString procedure and stores the result.
 ;
-; Postconditions: 
-;
 ; Receives: 
 ;   - promptAddr    = Address of the prompt string passed on the stack
 ;   - userInputAddr = Address of a byte array to store the result in passed on 
